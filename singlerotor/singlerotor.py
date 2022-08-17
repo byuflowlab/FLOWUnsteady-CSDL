@@ -1,16 +1,12 @@
 #=##############################################################################
 # DESCRIPTION
-#Test rotor model simulating an isolated 9.4in rotor in hover. The rotor and
-#configuration matches the 3D-printed propeller described in Ning, Z.,
-#*Experimental investigations on the aerodynamic and aeroacoustic characteristics
-#of small UAS propellers*, Sec. 5.2. This rotor roughly resembles a DJI Phantom
-#II rotor.
+# Runs a single-rotor FLOWUnsteady simulation from Python using PyJulia. Based 
+# on the singlerotor.jl example in the FLOWUnsteady examples.
 #
 # AUTHORSHIP
-#  * Author    : Eduardo J. Alvarez
-#  * Email     : Edo.AlvarezR@gmail.com
-#  * Created   : Dec 2019
-#  * License   : MIT
+#  * Author    : Christian Johanson
+#  * Email     : cjjohanson99@gmail.com
+#  * Created   : Aug 2022
 #=###############################################################################
 
 # ------------ MODULES ---------------------------------------------------------
@@ -20,15 +16,14 @@ jl = Julia(compiled_modules=False)
 
 from julia import Main
 
-from julia import FLOWUnsteady
+from julia import FLOWUnsteady # for ssome reason we need to use the full name of each package
 from julia import FLOWVLM
 
 import math
 
 # ------------ GLOBAL VARIABLES ------------------------------------------------
 # Default path where to save data
-extdrive_path = "/home/christian/Documents/FlowU_CSDL/"
-# extdrive_path = "temps/"
+extdrive_path = "/home/christian/Documents/FlowU_CSDL/" #! Update for your save path
 
 # ------------ DRIVERS ---------------------------------------------------------
 def run_singlerotor_hover(xfoil=True, prompt=True):
@@ -79,8 +74,6 @@ def singlerotor(xfoil       = True,             # Whether to run XFOIL
                 verbose     = True,
                 v_lvl       = 0,
                 rotor_file = "DJI-II.csv"):         # Rotor geometry
-
-    # TODO: Wake removal ?
 
     # ------------ PARAMETERS --------------------------------------------------
 
@@ -201,6 +194,7 @@ def singlerotor(xfoil       = True,             # Whether to run XFOIL
                                       verbose=verbose, v_lvl=v_lvl)
     return pfield
 
+# Skip monitor for now
 #"""
 #Generate monitor for rotor performance parameters
 #"""

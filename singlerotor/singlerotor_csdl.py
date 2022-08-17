@@ -1,3 +1,8 @@
+##### Note #####
+# This script example is still a work iin progress. 
+# It runs fine without declaring input and output CSDL variables.
+##### ---- #####
+
 from julia.api import Julia
 jl = Julia(compiled_modules=False)
 
