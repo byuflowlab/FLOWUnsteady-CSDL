@@ -13,17 +13,19 @@
 # Load simulation engine
 from julia.api import Julia
 jl = Julia(compiled_modules=False)
+# Or if you want to load a specific julia version
+# jl = Julia(compiled_modules=False, runtime="/path_to_julia_binary")
 
 from julia import Main
 
-from julia import FLOWUnsteady # for ssome reason we need to use the full name of each package
+from julia import FLOWUnsteady # for some reason we need to use the full name of each package
 from julia import FLOWVLM
 
 import math
 
 # ------------ GLOBAL VARIABLES ------------------------------------------------
 # Default path where to save data
-extdrive_path = "/home/christian/Documents/FlowU_CSDL/" #! Update for your save path
+extdrive_path = "path_to_storage_location"
 
 # ------------ DRIVERS ---------------------------------------------------------
 def run_singlerotor_hover(xfoil=True, prompt=True):
@@ -193,6 +195,8 @@ def singlerotor(xfoil       = True,             # Whether to run XFOIL
                                       prompt=prompt,
                                       verbose=verbose, v_lvl=v_lvl)
     return pfield
+
+run_singlerotor_hover()
 
 # Skip monitor for now
 #"""

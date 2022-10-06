@@ -1,10 +1,10 @@
-##### Note #####
-# This script example is still a work iin progress. 
-# It runs fine without declaring input and output CSDL variables.
-##### ---- #####
+#### Running a basic CSDL script for a single rotor in hover 
+# that calls FLOWUnsteady
 
 from julia.api import Julia
 jl = Julia(compiled_modules=False)
+# Or if you want to load a specific julia version
+# jl = Julia(compiled_modules=False, runtime="/path_to_julia_binary")
 
 from julia import Main
 
@@ -18,7 +18,8 @@ from csdl import Model
 import csdl
 import numpy as np
 
-extdrive_path = "/home/christian/Documents/FlowU_CSDL/"
+extdrive_path = "/path_to_storage_location"
+
 def singlerotor(xfoil       = True,             # Whether to run XFOIL
                 VehicleType = FLOWUnsteady.VLMVehicle,   # Vehicle type
                 J           = 0.0,              # Advance ratio
@@ -37,8 +38,6 @@ def singlerotor(xfoil       = True,             # Whether to run XFOIL
                 v_lvl       = 0,
                 rotor_file = "DJI-II.csv"):         # Rotor geometry
 
-    # TODO: Wake removal ?
-
     # ------------ PARAMETERS --------------------------------------------------
 
     # Rotor geometry
@@ -54,7 +53,6 @@ def singlerotor(xfoil       = True,             # Whether to run XFOIL
     R = a[0]
     B = a[2]
 
-
     # Simulation parameters
     RPM = 81*60;                         # RPM
     # J = 0.00001                       # Advance ratio Vinf/(nD)
@@ -64,7 +62,13 @@ def singlerotor(xfoil       = True,             # Whether to run XFOIL
     magVinf = J*RPM/60*(2*R)
     Main.magVinf = magVinf;
     Main.DVinf = DVinf;
+
+    #* Note: The Python/Julia interface doesn't do well converting 
+    # Python functions into Julia functions. We found it was much 
+    # easier to create these functions using Julia code with the 
+    # eval() command:
     Vinf = Main.eval("Vinf(X,t) = magVinf*DVinf")          # (m/s) freestream velocity
+    
     # Solver parameters
     # nrevs = 6                         # Number of revolutions in simulation
     # nsteps_per_rev = 72                 # Time steps per revolution
@@ -83,7 +87,6 @@ def singlerotor(xfoil       = True,             # Whether to run XFOIL
 
     max_particles = ((2*n+1)*B)*nrevs*nsteps_per_rev*p_per_step # Max particles for memory pre-allocation
     plot_disc = True                    # Plot blade discretization for debugging
-
 
     # ------------ SIMULATION SETUP --------------------------------------------
     # Generate rotor
@@ -130,43 +133,60 @@ def singlerotor(xfoil       = True,             # Whether to run XFOIL
     # Plot maneuver path and controls
     FLOWUnsteady.plot_maneuver(maneuver, vis_nsteps=nsteps)
 
-
     # ----- SIMULATION DEFINITION
     RPMref = RPM
     Vref = 0.0
     simulation = FLOWUnsteady.Simulation(vehicle, maneuver, Vref, RPMref, ttot)
 
-#    monitor = generate_monitor(J, rho, RPM, nsteps, save_path=save_path,
-#                                                            run_name=run_name)
-    def monitor():
-        return False;
+    sigma_vlm_surf = R/10;
+    sigma_rotor_surf = R/20;
+
+    def monitor(*args, **kwargs):
+        return True;
+    
     # ------------ RUN SIMULATION ----------------------------------------------
     pfield = FLOWUnsteady.run_simulation(simulation, nsteps,
                                       # SIMULATION OPTIONS
                                       Vinf=Vinf,
                                       # SOLVERS OPTIONS
                                       p_per_step=p_per_step,
-                                      overwrite_sigma=overwrite_sigma,
-                                      vlm_sigma=vlm_sigma,
-                                      surf_sigma=surf_sigma,
+                                      sigma_vlm_surf=sigma_vlm_surf,
+                                      sigma_rotor_surf=sigma_rotor_surf,
                                       max_particles=max_particles,
                                       shed_unsteady=shed_unsteady,
+                                      extra_runtime_function=monitor,
                                       # OUTPUT OPTIONS
                                       save_path=save_path,
                                       run_name=run_name,
                                       prompt=prompt,
                                       verbose=verbose, v_lvl=v_lvl)
-    return pfield
+    return pfield, rotor;
 
 class SingleRotor_Hover(Model):
     def define(self):
-        J = self.create_input('J', val=0.00)
-        J1 = J;
+        J = 0;
         angle = 0.0
-        p = singlerotor(xfoil=True, VehicleType=FLOWUnsteady.VLMVehicle, J=0.00,
-        DVinf=[math.cos(math.pi/180*angle), math.sin((math.pi)/180*angle), 0],save_path=extdrive_path + "singlerotor_csdl/", prompt=True)
-        self.register_output('PField', p)
+        v = singlerotor(xfoil=True, VehicleType=FLOWUnsteady.VLMVehicle, J=J,
+            DVinf=[math.cos(math.pi/180*angle), math.sin((math.pi)/180*angle), 0],
+            save_path=extdrive_path + "singlerotor_csdl/", prompt=True);
+        r = v[1]
+        rho = 1.225
+
+        #Data points from rotor
+        rp = r.r; #rotor sections
+        np = r.sol["Np"]["field_data"] #Normal load values for rotor section
+        tp = r.sol["Tp"]["field_data"] #Tangential load values for rotor section
+
+        #Multiply data by 1 into a CSDL output
+        a = self.declare_variable('a', val = 1) # Filler CSDL variable to get correct type upon output
+        rotor_points = a * rp;
+        np_val = a * np[1];
+        tp_val = a * tp[1];
+
+        #Register all the outputs
+        self.register_output("rotor_points", rotor_points)
+        self.register_output("np_val", np_val)
+        self.register_output("tp_val", tp_val)
 
 sim = Simulator(SingleRotor_Hover())
 sim.run()
-print('pfield', sim['PField'].shape)

@@ -26,9 +26,7 @@ using PyPlot
 
 # ------------ GLOBAL VARIABLES ------------------------------------------------
 # Default path where to save data
-extdrive_path = "/home/christian/Documents/FlowU_CSDL/"
-# extdrive_path = "temps/"
-
+extdrive_path = "path_to_storage_location"
 
 
 # ------------ DRIVERS ---------------------------------------------------------
@@ -81,8 +79,6 @@ function singlerotor(;  xfoil       = true,             # Whether to run XFOIL
                         v_lvl       = 0,
                         rotor_file = "DJI-II.csv",           # Rotor geometry
                         optargs...)
-
-    # TODO: Wake removal ?
 
     # ------------ PARAMETERS --------------------------------------------------
 
